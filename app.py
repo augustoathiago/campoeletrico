@@ -250,4 +250,3 @@ with rC:
     st.latex(rf"E_{{rx}}={latex_sci(Exr,2,r'\mathrm{{N/C}}')}\ {arrow_x(Exr)}")
     st.latex(rf"E_{{ry}}={latex_sci(Eyr,2,r'\mathrm{{N/C}}')}\ {arrow_y(Eyr)}")
     st.latex(rf"\\theta_r={thr:.1f}^\circ")
-``
