@@ -178,4 +178,3 @@ with cC:
     st.latex(rf"E_{{rx}} = {latex_sci(Exr)}\ {arrow_x(Exr)}")
     st.latex(rf"E_{{ry}} = {latex_sci(Eyr)}\ {arrow_y(Eyr)}")
     st.latex(rf"\theta = {thr:.1f}^\circ")
-``
