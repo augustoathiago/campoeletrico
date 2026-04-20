@@ -8,7 +8,7 @@ K = 9.0e9  # N·m²/C²
 
 # ===================== Funções auxiliares =====================
 def sci_parts(x, n=3):
-    """Retorna mantissa e expoente em notação científica."""
+    """Retorna mantissa e expoente em notação científica com n algarismos significativos."""
     if x == 0:
         return 0.0, 0
     exp = int(math.floor(math.log10(abs(x))))
@@ -20,7 +20,7 @@ def sci_parts(x, n=3):
     return mant, exp
 
 def latex_sci(x, n=3, unit=r"\mathrm{N/C}"):
-    """Formata número em LaTeX com notação científica."""
+    """Formata número em LaTeX com notação científica (n algarismos significativos)."""
     if x == 0:
         return rf"0\,{unit}"
     mant, exp = sci_parts(x, n)
@@ -28,12 +28,20 @@ def latex_sci(x, n=3, unit=r"\mathrm{N/C}"):
     return rf"{mant_s}\times10^{{{exp}}}\,{unit}"
 
 def latex_sci_m(x, n=3, unit=r"\mathrm{m}"):
-    """Formata distância em LaTeX com notação científica (metros)."""
+    """Formata distância em LaTeX com notação científica (n algarismos significativos)."""
     if x == 0:
         return rf"0\,{unit}"
     mant, exp = sci_parts(x, n)
     mant_s = f"{mant:.{n}g}".replace(".", "{,}")
     return rf"{mant_s}\times10^{{{exp}}}\,{unit}"
+
+def latex_full(x, sig=15):
+    """
+    Formata valor com alta precisão (sem arredondar para poucas casas).
+    Usa sig dígitos significativos para exibir o valor do float com fidelidade.
+    """
+    s = f"{x:.{sig}g}"
+    return s.replace(".", "{,}")
 
 def arrow_x(v):
     if v > 0:
@@ -50,7 +58,12 @@ def arrow_y(v):
     return r""
 
 def color_charge(q):
-    return "#d62728" if q > 0 else "#1f77b4"
+    """Cores: positivo vermelho, negativo azul, neutro borda preta (Item 6)."""
+    if q > 0:
+        return "#d62728"
+    elif q < 0:
+        return "#1f77b4"
+    return "#000000"
 
 def electric_field(q, xq, yq, xp, yp):
     """Campo elétrico (componentes, módulo, ângulo) devido a uma carga puntiforme."""
@@ -60,13 +73,13 @@ def electric_field(q, xq, yq, xp, yp):
     Ey = K * q * dy / (r**3)
     E = math.hypot(Ex, Ey)
     th = math.degrees(math.atan2(Ey, Ex))
-    return Ex, Ey, E, th, r, dx, dy
+    return Ex, Ey, E, th, r
 
 def latex_num(x, digits=3):
     """Número com vírgula decimal (para LaTeX)."""
     return f"{x:.{digits}f}".replace(".", "{,}")
 
-# ===================== Logo no início (Item 1) =====================
+# ===================== Logo no início =====================
 st.image("logo_maua.png", width=180)
 
 # ===================== Cabeçalho =====================
@@ -78,7 +91,6 @@ st.header("Definições")
 
 c1, c2, c3 = st.columns(3)
 
-# (Item 2) sliders x e y de -10 a 10 m
 with c1:
     st.subheader("Partícula 1")
     x1 = st.slider("x₁ (m)", -10.0, 10.0, -6.0, 0.1)
@@ -103,8 +115,9 @@ if len(points) < 3:
     st.stop()
 
 # ===================== Física =====================
-Ex1, Ey1, E1, th1, r1, dx1, dy1 = electric_field(q1, x1, y1, xP, yP)
-Ex2, Ey2, E2, th2, r2, dx2, dy2 = electric_field(q2, x2, y2, xP, yP)
+Ex1, Ey1, E1, th1, r1 = electric_field(q1, x1, y1, xP, yP)
+Ex2, Ey2, E2, th2, r2 = electric_field(q2, x2, y2, xP, yP)
+
 Exr, Eyr = Ex1 + Ex2, Ey1 + Ey2
 Er = math.hypot(Exr, Eyr)
 thr = math.degrees(math.atan2(Eyr, Exr))
@@ -112,26 +125,19 @@ thr = math.degrees(math.atan2(Eyr, Exr))
 # ===================== Figura =====================
 st.header("Figura – Campo elétrico no ponto P")
 
-# (Item 3) eixos de -15 até 15
+# Eixos -15 a 15 (como você já queria antes)
 xmin, xmax = -15, 15
 ymin, ymax = -15, 15
 
-# Canvas e escala
 W, H = 900, 600
-# Centraliza a origem no meio do canvas
 ox, oy = W // 2, H // 2
+scale = int(min(W, H) * 0.80 / (xmax - xmin))
 
-# Escolhe escala para caber [-15,15] em W/H com margem
-# 30 m no total -> escala ~ (min(W,H)*0.8)/30
-scale = int(min(W, H) * 0.80 / (xmax - xmin))  # px por metro
-
-# ticks: grade a cada 1 m (bem claro) + rótulo a cada 5 m
 minor_ticks = list(range(xmin, xmax + 1, 1))
 major_ticks = list(range(xmin, xmax + 1, 5))
 
-# Vetor: escala visual baseada no maior módulo
-Emax = max(E1, E2, Er, 1e-12)  # evita divisão por zero
-Lmax = 110  # tamanho máximo (px) de vetor desenhado
+Emax = max(E1, E2, Er, 1e-12)
+Lmax = 110
 
 html = f"""
 <canvas id="c" width="{W}" height="{H}" style="background:white;border:1px solid #ddd;"></canvas>
@@ -227,13 +233,13 @@ axisArrow(X(0),Y({ymin}),X(0),Y({ymax}));
 ctx.fillText("x (m)", X({xmax})+12, Y(0)+6);
 ctx.fillText("y (m)", X(0)-10, Y({ymax})-12);
 
-// ===== Desenho das partículas =====
-function particle(x,y,label,color){{
+// ===== Partículas =====
+function particle(x,y,label,borderColor){{
   ctx.beginPath();
   ctx.arc(X(x), Y(y), 14, 0, 2*Math.PI);
   ctx.fillStyle="#fafafa";
   ctx.fill();
-  ctx.strokeStyle=color;
+  ctx.strokeStyle=borderColor;
   ctx.lineWidth=3;
   ctx.stroke();
   ctx.fillStyle="#000";
@@ -250,12 +256,42 @@ ctx.fillStyle="#000";
 ctx.fill();
 ctx.fillText("P", X({xP})+8, Y({yP})-8);
 
+// ===== Função: desenhar rótulo com "seta do vetor" bem em cima (Item 1) =====
+function drawVectorLabel(text, x, y, color) {{
+  ctx.fillStyle = color;
+  ctx.font = "16px sans-serif";
+  ctx.fillText(text, x, y);
+
+  // seta acima do texto
+  const w = ctx.measureText(text).width;
+  const yArrow = y - 16;     // altura da seta acima do texto
+  const x0 = x + 2;
+  const x1 = x + w - 2;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+
+  // linha da seta
+  ctx.beginPath();
+  ctx.moveTo(x0, yArrow);
+  ctx.lineTo(x1, yArrow);
+  ctx.stroke();
+
+  // ponta da seta (no final)
+  const head = 6;
+  ctx.beginPath();
+  ctx.moveTo(x1, yArrow);
+  ctx.lineTo(x1 - head, yArrow - head/2);
+  ctx.lineTo(x1 - head, yArrow + head/2);
+  ctx.closePath();
+  ctx.fill();
+}}
+
 // ===== Vetores do campo no ponto P =====
-function drawVector(Ex, Ey, color, label) {{
+function drawVector(Ex, Ey, color, labelText) {{
   const Em = Math.hypot(Ex, Ey);
   if (Em === 0) return;
 
-  // comprimento proporcional ao módulo
   const L = {Lmax} * (Em / {Emax});
   const ux = Ex/Em, uy = Ey/Em;
 
@@ -273,7 +309,7 @@ function drawVector(Ex, Ey, color, label) {{
   ctx.lineTo(X({xP})+dx, Y({yP}));
   ctx.stroke();
 
-  // componente y (a partir da ponta de x)
+  // componente y
   ctx.beginPath();
   ctx.moveTo(X({xP})+dx, Y({yP}));
   ctx.lineTo(X({xP})+dx, Y({yP})-dy);
@@ -300,35 +336,35 @@ function drawVector(Ex, Ey, color, label) {{
   ctx.fillStyle=color;
   ctx.fill();
 
-  // rótulo
-  ctx.fillStyle=color;
-  ctx.fillText(label, X({xP})+dx+8, Y({yP})-dy-8);
+  // rótulo (Item 1: seta bem encima do "E1/E2/Er")
+  const lx = X({xP}) + dx + 10;
+  const ly = Y({yP}) - dy - 6;
+  drawVectorLabel(labelText, lx, ly, color);
+
   ctx.fillStyle="#000";
 }}
 
-drawVector({Ex1}, {Ey1}, "#d62728", "⃗E₁");
-drawVector({Ex2}, {Ey2}, "#1f77b4", "⃗E₂");
-drawVector({Exr}, {Eyr}, "#2ca02c", "⃗Eᵣ");
+drawVector({Ex1}, {Ey1}, "#d62728", "E₁");
+drawVector({Ex2}, {Ey2}, "#1f77b4", "E₂");
+drawVector({Exr}, {Eyr}, "#2ca02c", "Eᵣ");
 </script>
 """
 
 components.html(html, height=H + 30)
 
-# ===================== (Item 4) Distâncias =====================
+# ===================== Distâncias (Item 2) =====================
 st.header("Distâncias")
 
 d1, d2 = st.columns(2)
 with d1:
     st.subheader("Entre a partícula 1 e P")
-    st.latex(rf"r_1 = \sqrt{{(x_P-x_1)^2 + (y_P-y_1)^2}} = \sqrt{{({latex_num(xP)}-{latex_num(x1)})^2 + ({latex_num(yP)}-{latex_num(y1)})^2}}")
     st.latex(rf"r_1 = {latex_sci_m(r1, n=3)}")
 
 with d2:
     st.subheader("Entre a partícula 2 e P")
-    st.latex(rf"r_2 = \sqrt{{(x_P-x_2)^2 + (y_P-y_2)^2}} = \sqrt{{({latex_num(xP)}-{latex_num(x2)})^2 + ({latex_num(yP)}-{latex_num(y2)})^2}}")
     st.latex(rf"r_2 = {latex_sci_m(r2, n=3)}")
 
-# ===================== (Item 5) Campo elétrico depois de Distâncias =====================
+# ===================== Campo elétrico =====================
 st.header("Campo elétrico")
 
 st.write(
@@ -339,44 +375,26 @@ st.write(
 st.latex(r"\vec{E}_1 = K\frac{q_1}{r_1^2}\,\hat{r}_1 \qquad \text{e} \qquad \vec{E}_2 = K\frac{q_2}{r_2^2}\,\hat{r}_2")
 st.latex(r"\vec{E}_r = \vec{E}_1 + \vec{E}_2")
 
-# Mostrar E1 e E2 com valores substituídos (módulo) + componentes
+# ===================== Substituição numérica (módulos) (Item 3) =====================
+st.subheader("Substituição numérica (módulos)")
+
+# módulos (para substituição) - E1mag e E2mag aqui são escalares (podem ser negativos se q<0)
 E1mag = K * q1 / (r1**2)
 E2mag = K * q2 / (r2**2)
 
-# Equações substituídas (módulo)
-st.subheader("Substituição numérica (módulos)")
-
+# Mostrar r1 e r2 "sem arredondamentos" (alta precisão) e arredondar só o resultado final
 st.latex(
-    rf"E_1 = K\frac{{|q_1|}}{{r_1^2}} = (9,0\times10^9)\frac{{|{latex_num(q1,6)}|}}{{({latex_num(r1,4)})^2}}"
+    rf"E_1 = K\frac{{|q_1|}}{{r_1^2}} = (9,0\times10^9)\frac{{|{latex_full(q1, 15)}|}}{{({latex_full(r1, 15)})^2}}"
     rf" = {latex_sci(abs(E1mag), n=3)}"
 )
 st.latex(
-    rf"E_2 = K\frac{{|q_2|}}{{r_2^2}} = (9,0\times10^9)\frac{{|{latex_num(q2,6)}|}}{{({latex_num(r2,4)})^2}}"
+    rf"E_2 = K\frac{{|q_2|}}{{r_2^2}} = (9,0\times10^9)\frac{{|{latex_full(q2, 15)}|}}{{({latex_full(r2, 15)})^2}}"
     rf" = {latex_sci(abs(E2mag), n=3)}"
 )
 
-st.subheader("Componentes (com valores substituídos)")
-st.latex(r"\vec{E}_1 = K\,q_1\frac{(x_P-x_1)\,\hat{i}+(y_P-y_1)\,\hat{j}}{r_1^3}")
-st.latex(
-    rf"E_{{1x}} = (9,0\times10^9)\,{latex_num(q1,6)}\,\frac{{({latex_num(dx1)})}}{{({latex_num(r1,4)})^3}}"
-    rf" = {latex_sci(Ex1, n=3)}"
-)
-st.latex(
-    rf"E_{{1y}} = (9,0\times10^9)\,{latex_num(q1,6)}\,\frac{{({latex_num(dy1)})}}{{({latex_num(r1,4)})^3}}"
-    rf" = {latex_sci(Ey1, n=3)}"
-)
+# (Item 4) Seção de componentes com valores substituídos foi removida.
 
-st.latex(r"\vec{E}_2 = K\,q_2\frac{(x_P-x_2)\,\hat{i}+(y_P-y_2)\,\hat{j}}{r_2^3}")
-st.latex(
-    rf"E_{{2x}} = (9,0\times10^9)\,{latex_num(q2,6)}\,\frac{{({latex_num(dx2)})}}{{({latex_num(r2,4)})^3}}"
-    rf" = {latex_sci(Ex2, n=3)}"
-)
-st.latex(
-    rf"E_{{2y}} = (9,0\times10^9)\,{latex_num(q2,6)}\,\frac{{({latex_num(dy2)})}}{{({latex_num(r2,4)})^3}}"
-    rf" = {latex_sci(Ey2, n=3)}"
-)
-
-# ===================== (Item 6) Resultados com componentes e setas =====================
+# ===================== Resultados (Item 5) =====================
 st.header("Resultados")
 
 cA, cB, cC = st.columns(3)
