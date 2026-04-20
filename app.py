@@ -19,6 +19,14 @@ def sci_parts(x, n=3):
         exp += 1
     return mant, exp
 
+def latex_sci_plain(x, n=3):
+    """Retorna apenas mantissa×10^{expoente} (sem unidade), em LaTeX."""
+    if x == 0:
+        return r"0"
+    mant, exp = sci_parts(x, n)
+    mant_s = f"{mant:.{n}g}".replace(".", "{,}")
+    return rf"{mant_s}\times10^{{{exp}}}"
+
 def latex_sci(x, n=3, unit=r"\mathrm{N/C}"):
     """Formata número em LaTeX com notação científica (n algarismos significativos)."""
     if x == 0:
@@ -58,7 +66,7 @@ def arrow_y(v):
     return r""
 
 def color_charge(q):
-    """Cores: positivo vermelho, negativo azul, neutro borda preta (Item 6)."""
+    """Cores: positivo vermelho, negativo azul, neutro borda preta."""
     if q > 0:
         return "#d62728"
     elif q < 0:
@@ -125,7 +133,6 @@ thr = math.degrees(math.atan2(Eyr, Exr))
 # ===================== Figura =====================
 st.header("Figura – Campo elétrico no ponto P")
 
-# Eixos -15 a 15 (como você já queria antes)
 xmin, xmax = -15, 15
 ymin, ymax = -15, 15
 
@@ -256,28 +263,25 @@ ctx.fillStyle="#000";
 ctx.fill();
 ctx.fillText("P", X({xP})+8, Y({yP})-8);
 
-// ===== Função: desenhar rótulo com "seta do vetor" bem em cima (Item 1) =====
+// ===== Rótulo com "seta do vetor" bem em cima =====
 function drawVectorLabel(text, x, y, color) {{
   ctx.fillStyle = color;
   ctx.font = "16px sans-serif";
   ctx.fillText(text, x, y);
 
-  // seta acima do texto
   const w = ctx.measureText(text).width;
-  const yArrow = y - 16;     // altura da seta acima do texto
+  const yArrow = y - 16;
   const x0 = x + 2;
   const x1 = x + w - 2;
 
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
 
-  // linha da seta
   ctx.beginPath();
   ctx.moveTo(x0, yArrow);
   ctx.lineTo(x1, yArrow);
   ctx.stroke();
 
-  // ponta da seta (no final)
   const head = 6;
   ctx.beginPath();
   ctx.moveTo(x1, yArrow);
@@ -287,7 +291,7 @@ function drawVectorLabel(text, x, y, color) {{
   ctx.fill();
 }}
 
-// ===== Vetores do campo no ponto P =====
+// ===== Vetores =====
 function drawVector(Ex, Ey, color, labelText) {{
   const Em = Math.hypot(Ex, Ey);
   if (Em === 0) return;
@@ -298,18 +302,15 @@ function drawVector(Ex, Ey, color, labelText) {{
   const dx = L*ux;
   const dy = L*uy;
 
-  // componentes tracejadas
   ctx.setLineDash([6,5]);
   ctx.strokeStyle=color;
   ctx.lineWidth=2;
 
-  // componente x
   ctx.beginPath();
   ctx.moveTo(X({xP}), Y({yP}));
   ctx.lineTo(X({xP})+dx, Y({yP}));
   ctx.stroke();
 
-  // componente y
   ctx.beginPath();
   ctx.moveTo(X({xP})+dx, Y({yP}));
   ctx.lineTo(X({xP})+dx, Y({yP})-dy);
@@ -317,7 +318,6 @@ function drawVector(Ex, Ey, color, labelText) {{
 
   ctx.setLineDash([]);
 
-  // vetor resultante
   ctx.strokeStyle=color;
   ctx.lineWidth=3;
   ctx.beginPath();
@@ -325,7 +325,6 @@ function drawVector(Ex, Ey, color, labelText) {{
   ctx.lineTo(X({xP})+dx, Y({yP})-dy);
   ctx.stroke();
 
-  // ponta da seta
   const a = Math.atan2(-dy, dx);
   const h = 10;
   ctx.beginPath();
@@ -336,7 +335,6 @@ function drawVector(Ex, Ey, color, labelText) {{
   ctx.fillStyle=color;
   ctx.fill();
 
-  // rótulo (Item 1: seta bem encima do "E1/E2/Er")
   const lx = X({xP}) + dx + 10;
   const ly = Y({yP}) - dy - 6;
   drawVectorLabel(labelText, lx, ly, color);
@@ -349,10 +347,9 @@ drawVector({Ex2}, {Ey2}, "#1f77b4", "E₂");
 drawVector({Exr}, {Eyr}, "#2ca02c", "Eᵣ");
 </script>
 """
-
 components.html(html, height=H + 30)
 
-# ===================== Distâncias (Item 2) =====================
+# ===================== Distâncias =====================
 st.header("Distâncias")
 
 d1, d2 = st.columns(2)
@@ -375,26 +372,23 @@ st.write(
 st.latex(r"\vec{E}_1 = K\frac{q_1}{r_1^2}\,\hat{r}_1 \qquad \text{e} \qquad \vec{E}_2 = K\frac{q_2}{r_2^2}\,\hat{r}_2")
 st.latex(r"\vec{E}_r = \vec{E}_1 + \vec{E}_2")
 
-# ===================== Substituição numérica (módulos) (Item 3) =====================
+# ===================== Substituição numérica (módulos) =====================
 st.subheader("Substituição numérica (módulos)")
 
-# módulos (para substituição) - E1mag e E2mag aqui são escalares (podem ser negativos se q<0)
 E1mag = K * q1 / (r1**2)
 E2mag = K * q2 / (r2**2)
 
-# Mostrar r1 e r2 "sem arredondamentos" (alta precisão) e arredondar só o resultado final
+# Agora q1 e q2 aparecem em ×10^n (sem "e-06")
 st.latex(
-    rf"E_1 = K\frac{{|q_1|}}{{r_1^2}} = (9,0\times10^9)\frac{{|{latex_full(q1, 15)}|}}{{({latex_full(r1, 15)})^2}}"
+    rf"E_1 = K\frac{{|q_1|}}{{r_1^2}} = (9,0\times10^9)\frac{{\left|{latex_sci_plain(abs(q1), n=3)}\right|}}{{({latex_full(r1, 15)})^2}}"
     rf" = {latex_sci(abs(E1mag), n=3)}"
 )
 st.latex(
-    rf"E_2 = K\frac{{|q_2|}}{{r_2^2}} = (9,0\times10^9)\frac{{|{latex_full(q2, 15)}|}}{{({latex_full(r2, 15)})^2}}"
+    rf"E_2 = K\frac{{|q_2|}}{{r_2^2}} = (9,0\times10^9)\frac{{\left|{latex_sci_plain(abs(q2), n=3)}\right|}}{{({latex_full(r2, 15)})^2}}"
     rf" = {latex_sci(abs(E2mag), n=3)}"
 )
 
-# (Item 4) Seção de componentes com valores substituídos foi removida.
-
-# ===================== Resultados (Item 5) =====================
+# ===================== Resultados =====================
 st.header("Resultados")
 
 cA, cB, cC = st.columns(3)
@@ -419,3 +413,4 @@ with cC:
     st.latex(rf"\theta_r = {latex_num(thr, 1)}^\circ")
     st.latex(rf"E_{{rx}} = {latex_sci(Exr)}\;{arrow_x(Exr)}")
     st.latex(rf"E_{{ry}} = {latex_sci(Eyr)}\;{arrow_y(Eyr)}")
+``
