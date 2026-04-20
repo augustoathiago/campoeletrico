@@ -413,4 +413,3 @@ with cC:
     st.latex(rf"\theta_r = {latex_num(thr, 1)}^\circ")
     st.latex(rf"E_{{rx}} = {latex_sci(Exr)}\;{arrow_x(Exr)}")
     st.latex(rf"E_{{ry}} = {latex_sci(Eyr)}\;{arrow_y(Eyr)}")
-``
