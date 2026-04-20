@@ -51,6 +51,10 @@ def latex_full(x, sig=15):
     s = f"{x:.{sig}g}"
     return s.replace(".", "{,}")
 
+def latex_num(x, digits=3):
+    """Número com vírgula decimal (para LaTeX)."""
+    return f"{x:.{digits}f}".replace(".", "{,}")
+
 def arrow_x(v):
     if v > 0:
         return r"\rightarrow"
@@ -83,16 +87,17 @@ def electric_field(q, xq, yq, xp, yp):
     th = math.degrees(math.atan2(Ey, Ex))
     return Ex, Ey, E, th, r
 
-def latex_num(x, digits=3):
-    """Número com vírgula decimal (para LaTeX)."""
-    return f"{x:.{digits}f}".replace(".", "{,}")
+# ===================== Cabeçalho em duas colunas (NOVO) =====================
+col_logo, col_texto = st.columns([1, 4], vertical_alignment="center")
 
-# ===================== Logo no início =====================
-st.image("logo_maua.png", width=180)
+with col_logo:
+    st.image("logo_maua.png", use_container_width=True)
 
-# ===================== Cabeçalho =====================
-st.title("Simulador de campo elétrico Física II")
-st.write("Verifique o campo elétrico gerado por partículas carregadas em um ponto **P**.")
+with col_texto:
+    st.title("Simulador de campo elétrico Física II")
+    st.write("Verifique o campo elétrico gerado por partículas carregadas em um ponto **P**.")
+
+st.divider()
 
 # ===================== Definições =====================
 st.header("Definições")
@@ -210,19 +215,16 @@ ctx.fillStyle="#000";
 ctx.strokeStyle="#000";
 ctx.lineWidth=2;
 
-// eixo x
 ctx.beginPath();
 ctx.moveTo(X({xmin}), Y(0));
 ctx.lineTo(X({xmax}), Y(0));
 ctx.stroke();
 
-// eixo y
 ctx.beginPath();
 ctx.moveTo(X(0), Y({ymin}));
 ctx.lineTo(X(0), Y({ymax}));
 ctx.stroke();
 
-// setas dos eixos
 function axisArrow(x1,y1,x2,y2){{
   const a = Math.atan2(y2-y1, x2-x1);
   const h = 10;
@@ -263,7 +265,7 @@ ctx.fillStyle="#000";
 ctx.fill();
 ctx.fillText("P", X({xP})+8, Y({yP})-8);
 
-// ===== Rótulo com "seta do vetor" bem em cima =====
+// ===== Rótulo com seta por cima =====
 function drawVectorLabel(text, x, y, color) {{
   ctx.fillStyle = color;
   ctx.font = "16px sans-serif";
@@ -351,24 +353,20 @@ components.html(html, height=H + 30)
 
 # ===================== Distâncias =====================
 st.header("Distâncias")
-
 d1, d2 = st.columns(2)
 with d1:
     st.subheader("Entre a partícula 1 e P")
     st.latex(rf"r_1 = {latex_sci_m(r1, n=3)}")
-
 with d2:
     st.subheader("Entre a partícula 2 e P")
     st.latex(rf"r_2 = {latex_sci_m(r2, n=3)}")
 
 # ===================== Campo elétrico =====================
 st.header("Campo elétrico")
-
 st.write(
     "onde **q₁ e q₂** são as cargas das partículas, **r₁ e r₂** são as distâncias entre as partículas e o ponto **P**, "
     "e **K** é a constante de Coulomb igual a **9,0×10⁹ N·m²/C²**."
 )
-
 st.latex(r"\vec{E}_1 = K\frac{q_1}{r_1^2}\,\hat{r}_1 \qquad \text{e} \qquad \vec{E}_2 = K\frac{q_2}{r_2^2}\,\hat{r}_2")
 st.latex(r"\vec{E}_r = \vec{E}_1 + \vec{E}_2")
 
@@ -378,7 +376,6 @@ st.subheader("Substituição numérica (módulos)")
 E1mag = K * q1 / (r1**2)
 E2mag = K * q2 / (r2**2)
 
-# Agora q1 e q2 aparecem em ×10^n (sem "e-06")
 st.latex(
     rf"E_1 = K\frac{{|q_1|}}{{r_1^2}} = (9,0\times10^9)\frac{{\left|{latex_sci_plain(abs(q1), n=3)}\right|}}{{({latex_full(r1, 15)})^2}}"
     rf" = {latex_sci(abs(E1mag), n=3)}"
@@ -392,7 +389,6 @@ st.latex(
 st.header("Resultados")
 
 cA, cB, cC = st.columns(3)
-
 with cA:
     st.subheader("E₁")
     st.latex(rf"E_1 = {latex_sci(E1)}")
