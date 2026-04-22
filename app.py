@@ -6,6 +6,18 @@ import math
 st.set_page_config(page_title="Simulador de campo elétrico Física II", layout="wide")
 K = 9.0e9  # N·m²/C²
 
+# ===================== CSS (melhor para mobile) =====================
+st.markdown(
+    """
+    <style>
+      @media (max-width: 768px){
+        .block-container { padding-left: 0.8rem; padding-right: 0.8rem; }
+      }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # ===================== Funções auxiliares =====================
 def sci_parts(x, n=3):
     """Retorna mantissa e expoente em notação científica com n algarismos significativos."""
@@ -87,11 +99,14 @@ def electric_field(q, xq, yq, xp, yp):
     th = math.degrees(math.atan2(Ey, Ex))
     return Ex, Ey, E, th, r
 
-# ===================== Cabeçalho em duas colunas (NOVO) =====================
+# ===================== Cabeçalho em duas colunas =====================
 col_logo, col_texto = st.columns([1, 4], vertical_alignment="center")
 
 with col_logo:
-    st.image("logo_maua.png", use_container_width=True)
+    try:
+        st.image("logo_maua.png", use_container_width=True)
+    except Exception:
+        st.caption("logo_maua.png (opcional)")
 
 with col_texto:
     st.title("Simulador de campo elétrico Física II")
@@ -122,7 +137,7 @@ with c3:
     yP = st.slider("yₚ (m)", -10.0, 10.0,  4.0, 0.1)
 
 # ===================== Bloqueio de posições coincidentes =====================
-points = {(round(x1,2), round(y1,2)), (round(x2,2), round(y2,2)), (round(xP,2), round(yP,2))}
+points = {(round(x1, 2), round(y1, 2)), (round(x2, 2), round(y2, 2)), (round(xP, 2), round(yP, 2))}
 if len(points) < 3:
     st.error("❌ Partículas e ponto P não podem ocupar a mesma posição.")
     st.stop()
@@ -137,13 +152,15 @@ thr = math.degrees(math.atan2(Eyr, Exr))
 
 # ===================== Figura =====================
 st.header("Figura – Campo elétrico no ponto P")
+st.caption("📱 No celular: deslize para o lado (horizontal) para ver toda a figura.")
 
 xmin, xmax = -15, 15
 ymin, ymax = -15, 15
 
-W, H = 900, 600
-ox, oy = W // 2, H // 2
-scale = int(min(W, H) * 0.80 / (xmax - xmin))
+# Tamanho visual (CSS px) do canvas (mantém grande para ficar legível)
+CANVAS_CSS_W, CANVAS_CSS_H = 900, 600
+ox, oy = CANVAS_CSS_W // 2, CANVAS_CSS_H // 2
+scale = int(min(CANVAS_CSS_W, CANVAS_CSS_H) * 0.80 / (xmax - xmin))
 
 minor_ticks = list(range(xmin, xmax + 1, 1))
 major_ticks = list(range(xmin, xmax + 1, 5))
@@ -152,11 +169,84 @@ Emax = max(E1, E2, Er, 1e-12)
 Lmax = 110
 
 html = f"""
-<canvas id="c" width="{W}" height="{H}" style="background:white;border:1px solid #ddd;"></canvas>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  html, body {{
+    margin: 0; padding: 0;
+    background: transparent;
+    font-family: Arial, sans-serif;
+  }}
+
+  /* Moldura */
+  .frame {{
+    background: white;
+    padding: 6px;
+    border-radius: 14px;
+    border: 1px solid #eee;
+  }}
+
+  /* Contêiner com rolagem horizontal (swipe no mobile) */
+  .scroll-x {{
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    border-radius: 12px;
+    position: relative;
+  }}
+
+  /* Dica visual sutil de que há scroll lateral */
+  .scroll-x:after {{
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    top: 0; right: 0;
+    width: 26px; height: 100%;
+    background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.95));
+  }}
+
+  canvas {{
+    background: white;
+    border: 1px solid #ddd;
+    display: block;
+    border-radius: 12px;
+    max-width: none; /* não encolher no mobile */
+  }}
+</style>
+</head>
+
+<body>
+  <div class="frame">
+    <div class="scroll-x">
+      <canvas id="c"></canvas>
+    </div>
+  </div>
+
 <script>
 const c = document.getElementById("c");
 const ctx = c.getContext("2d");
 
+// =====================================================
+// ✅ NITIDEZ EM TELAS RETINA (celulares)
+// - define tamanho CSS e multiplica pelo devicePixelRatio
+// - desenha usando coordenadas em pixels CSS (mais simples)
+// =====================================================
+const cssW = {CANVAS_CSS_W};
+const cssH = {CANVAS_CSS_H};
+const dpr = window.devicePixelRatio || 1;
+
+c.style.width = cssW + "px";
+c.style.height = cssH + "px";
+c.width = Math.floor(cssW * dpr);
+c.height = Math.floor(cssH * dpr);
+ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // escala p/ ficar nítido
+
+const W = cssW, H = cssH;
 const scale = {scale};
 const ox = {ox};
 const oy = {oy};
@@ -164,7 +254,7 @@ const oy = {oy};
 function X(x){{ return ox + x*scale; }}
 function Y(y){{ return oy - y*scale; }}
 
-ctx.clearRect(0,0,{W},{H});
+ctx.clearRect(0,0,W,H);
 ctx.font = "14px sans-serif";
 ctx.fillStyle = "#000";
 
@@ -304,6 +394,7 @@ function drawVector(Ex, Ey, color, labelText) {{
   const dx = L*ux;
   const dy = L*uy;
 
+  // componentes tracejadas
   ctx.setLineDash([6,5]);
   ctx.strokeStyle=color;
   ctx.lineWidth=2;
@@ -320,6 +411,7 @@ function drawVector(Ex, Ey, color, labelText) {{
 
   ctx.setLineDash([]);
 
+  // vetor principal
   ctx.strokeStyle=color;
   ctx.lineWidth=3;
   ctx.beginPath();
@@ -327,6 +419,7 @@ function drawVector(Ex, Ey, color, labelText) {{
   ctx.lineTo(X({xP})+dx, Y({yP})-dy);
   ctx.stroke();
 
+  // seta na ponta
   const a = Math.atan2(-dy, dx);
   const h = 10;
   ctx.beginPath();
@@ -337,6 +430,7 @@ function drawVector(Ex, Ey, color, labelText) {{
   ctx.fillStyle=color;
   ctx.fill();
 
+  // label
   const lx = X({xP}) + dx + 10;
   const ly = Y({yP}) - dy - 6;
   drawVectorLabel(labelText, lx, ly, color);
@@ -348,8 +442,12 @@ drawVector({Ex1}, {Ey1}, "#d62728", "E₁");
 drawVector({Ex2}, {Ey2}, "#1f77b4", "E₂");
 drawVector({Exr}, {Eyr}, "#2ca02c", "Eᵣ");
 </script>
+</body>
+</html>
 """
-components.html(html, height=H + 30)
+
+# altura do iframe: um pouco maior para acomodar moldura
+components.html(html, height=CANVAS_CSS_H + 90)
 
 # ===================== Distâncias =====================
 st.header("Distâncias")
@@ -409,3 +507,4 @@ with cC:
     st.latex(rf"\theta_r = {latex_num(thr, 1)}^\circ")
     st.latex(rf"E_{{rx}} = {latex_sci(Exr)}\;{arrow_x(Exr)}")
     st.latex(rf"E_{{ry}} = {latex_sci(Eyr)}\;{arrow_y(Eyr)}")
+``
